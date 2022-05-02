@@ -9,7 +9,10 @@ import os
 from PIL import Image
 import random
 
-def train_data_loader(args):
+def train_data_loader(args, data_list=''):
+    if not data_list:
+        data_list = args.train_list
+
     mean_vals = [0.485, 0.456, 0.406]
     std_vals = [0.229, 0.224, 0.225]
         
@@ -23,14 +26,17 @@ def train_data_loader(args):
                                      transforms.Normalize(mean_vals, std_vals),
                                      ])
 
-    img_train = VOCDataset(args.train_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_train, mode='train')
+    img_train = VOCDataset(data_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_train, mode='train')
 
     train_loader = DataLoader(img_train, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
     return train_loader
 
 
-def valid_data_loader(args):
+def valid_data_loader(args, data_list=''):
+    if not data_list:
+        data_list = args.test_list
+    
     mean_vals = [0.485, 0.456, 0.406]
     std_vals = [0.229, 0.224, 0.225]
     
@@ -42,7 +48,7 @@ def valid_data_loader(args):
                                      transforms.Normalize(mean_vals, std_vals),
                                      ])
 
-    img_test = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='valid')
+    img_test = VOCDataset(data_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='valid')
 
     val_loader = DataLoader(img_test, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
 
@@ -50,7 +56,10 @@ def valid_data_loader(args):
 
 
 
-def test_data_loader(args):
+def test_data_loader(args, data_list=''):
+    if not data_list:
+        data_list = args.test_list
+
     mean_vals = [0.485, 0.456, 0.406]
     std_vals = [0.229, 0.224, 0.225]
 
@@ -62,7 +71,7 @@ def test_data_loader(args):
                                      transforms.Normalize(mean_vals, std_vals),
                                      ])
 
-    img_test = VOCDataset(args.test_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='test')
+    img_test = VOCDataset(data_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='test')
 
     test_loader = DataLoader(img_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 

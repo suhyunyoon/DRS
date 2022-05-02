@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 from models.vgg import vgg16
 from utils.decode import decode_seg_map_sequence
-from utils.LoadData import test_data_loader
+from utils.LoadData import train_data_loader, valid_data_loader, test_data_loader
 from utils.Metrics import Cls_Accuracy, RunningConfusionMatrix, IOUMetric
 from utils.decode import decode_segmap
 
@@ -21,6 +21,7 @@ parser.add_argument("--input_size", type=int, default=320)
 parser.add_argument("--crop_size", type=int, default=320)
 parser.add_argument("--img_dir", type=str, default="/data/DB/VOC2012/")
 parser.add_argument("--train_list", type=str, default='VOC2012_list/train_aug_cls.txt')
+parser.add_argument("--train_ulb_list", type=str)
 parser.add_argument("--test_list", type=str, default='VOC2012_list/train_cls.txt')
 parser.add_argument("--batch_size", type=int, default=1)
 parser.add_argument("--num_classes", type=int, default=20)
@@ -42,58 +43,69 @@ model.load_state_dict(ckpt['model'], strict=True)
 
 
 """ dataloader """
-test_loader = test_data_loader(args)
+train_loader = train_data_loader(args, args.train_list)
+test_loader = test_data_loader(args, args.test_list)
 
-""" metric """
-mIOU = IOUMetric(num_classes=21)
-running_confusion_matrix = RunningConfusionMatrix(labels=range(21))
+loaders = [train_loader, test_loader]
+
+if args.train_ulb_list:
+    train_ulb_loader = train_data_loader(args, args.train_ulb_list)
+    loaders.append(train_ulb_loader)
 
 
-for idx, dat in enumerate(test_loader):
-    print("[%03d/%03d]" % (idx, len(test_loader)), end="\r")
+for loader in loaders:
+    print('# of dataset:', len(loader) * args.batch_size)
 
-    img, label, sal_map, gt_map, img_name = dat
-    
-    label = label.cuda()
-    img = img.cuda()
+    """ metric """
+    mIOU = IOUMetric(num_classes=21)
+    running_confusion_matrix = RunningConfusionMatrix(labels=range(21))
 
-    _, H, W = sal_map.shape
-    localization_maps = np.zeros((20, H, W), dtype=np.float32)
+
+    for idx, dat in enumerate(test_loader):
+        print("[%03d/%03d]" % (idx, len(test_loader)), end="\r")
+
+        img, label, sal_map, gt_map, img_name = dat
         
-    # multi-scale testing
-    for s in [256, 320, 384]:
-        _img = F.interpolate(img, size=(s, s), mode='bilinear', align_corners=False)
+        label = label.cuda()
+        img = img.cuda()
 
-        _, cam = model(_img, label, size=(H, W))
+        _, H, W = sal_map.shape
+        localization_maps = np.zeros((20, H, W), dtype=np.float32)
+            
+        # multi-scale testing
+        for s in [256, 320, 384]:
+            _img = F.interpolate(img, size=(s, s), mode='bilinear', align_corners=False)
 
-        """ obtain CAMs """
-        cam = cam[0].cpu().detach().numpy()
-        localization_maps = np.maximum(localization_maps, cam)
+            _, cam = model(_img, label, size=(H, W))
 
-    img = img[0].cpu().detach().numpy()
-    gt_map = gt_map[0].detach().numpy()
-    sal_map = sal_map[0].detach().numpy()
-    
-    """ segmentation label generation """
-    localization_maps[localization_maps < args.alpha] = 0 # object cue
-    
-    bg = np.zeros((1, H, W), dtype=np.float32)
-    pred_map = np.concatenate([bg, localization_maps], axis=0)  # [21, H, W]
-    
-    pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
-    
-    pred_map = pred_map.argmax(0)
-    mIOU.add_batch(pred_map[None, ...], gt_map[None, ...])
-    
-    
-""" performance """
-res = mIOU.evaluate()
+            """ obtain CAMs """
+            cam = cam[0].cpu().detach().numpy()
+            localization_maps = np.maximum(localization_maps, cam)
 
-val_miou = res["Mean_IoU"]
-val_pixel_acc = res["Pixel_Accuracy"]
+        img = img[0].cpu().detach().numpy()
+        gt_map = gt_map[0].detach().numpy()
+        sal_map = sal_map[0].detach().numpy()
+        
+        """ segmentation label generation """
+        localization_maps[localization_maps < args.alpha] = 0 # object cue
+        
+        bg = np.zeros((1, H, W), dtype=np.float32)
+        pred_map = np.concatenate([bg, localization_maps], axis=0)  # [21, H, W]
+        
+        pred_map[0, :, :] = (1. - sal_map) # backgroudn cue
+        
+        pred_map = pred_map.argmax(0)
+        mIOU.add_batch(pred_map[None, ...], gt_map[None, ...])
+        
+        
+    """ performance """
+    res = mIOU.evaluate()
 
-print("\n=======================================")
-print("ckpt : ", args.checkpoint)
-print("val_miou : %.4f" % val_miou)
-print("val_pixel_acc : %.4f" % val_pixel_acc)
-print("=======================================\n")
+    val_miou = res["Mean_IoU"]
+    val_pixel_acc = res["Pixel_Accuracy"]
+
+    print("\n=======================================")
+    print("ckpt : ", args.checkpoint)
+    print("val_miou : %.4f" % val_miou)
+    print("val_pixel_acc : %.4f" % val_pixel_acc)
+    print("=======================================\n")

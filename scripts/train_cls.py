@@ -26,6 +26,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description='DRS pytorch implementation')
     parser.add_argument("--img_dir", type=str, default='', help='Directory of training images')
     parser.add_argument("--train_list", type=str, default='VOC2012_list/train_aug_cls.txt')
+    parser.add_argument("--train_ulb_list", type=str)
     parser.add_argument("--test_list", type=str, default='VOC2012_list/train_cls.txt')
     parser.add_argument("--batch_size", type=int, default=5)
     parser.add_argument("--input_size", type=int, default=384)
@@ -202,10 +203,14 @@ if __name__ == '__main__':
 
     writer = SummaryWriter(log_dir=args.logdir)
     
-    train_loader = train_data_loader(args)
+    train_loader = train_data_loader(args, args.train_list)
     val_loader = valid_data_loader(args)
     print('# of train dataset:', len(train_loader) * args.batch_size)
     print('# of valid dataset:', len(val_loader) * args.batch_size)
+
+    if args.train_ulb_list:
+        train_ulb_loader = train_data_loader(args, args.train_ulb_list)
+        print('# of unlabeled train dataset:', len(train_ulb_loader) * args.batch_size)
     print()
 
     best_score = 0

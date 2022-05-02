@@ -78,10 +78,11 @@ class DRS(nn.Module):
 
     
 class VGG(nn.Module):
-    def __init__(self, features, delta=0, num_classes=20, init_weights=True):
+    def __init__(self, features, delta=0, num_classes=20, init_weights=True, out_features=False):
         
         super(VGG, self).__init__()
-        
+        self.out_features = out_features
+
         self.features = features
         
         self.layer1_conv1 = features[0]
@@ -160,62 +161,68 @@ class VGG(nn.Module):
         x = self.layer1_relu1(x)
         x = self.layer1_conv2(x)
         x = self.layer1_relu2(x)
-        x = self.layer1_maxpool(x)
+        x1 = self.layer1_maxpool(x)
         
         # layer2
-        x = self.layer2_conv1(x)
+        x = self.layer2_conv1(x1)
         x = self.layer2_relu1(x)
         x = self.layer2_conv2(x)
         x = self.layer2_relu2(x)
-        x = self.layer2_maxpool(x)
+        x2 = self.layer2_maxpool(x)
         
         # layer3
-        x = self.layer3_conv1(x)
+        x = self.layer3_conv1(x2)
         x = self.layer3_relu1(x)
         x = self.layer3_conv2(x)
         x = self.layer3_relu2(x)
         x = self.layer3_conv3(x)
         x = self.layer3_relu3(x)
-        x = self.layer3_maxpool(x)
+        x3 = self.layer3_maxpool(x)
         
         # layer4
-        x = self.layer4_conv1(x)
+        x = self.layer4_conv1(x3)
         x = self.layer4_relu1(x)
         x = self.layer4_conv2(x)
         x = self.layer4_relu2(x)
         x = self.layer4_conv3(x)
         x = self.layer4_relu3(x)
-        x = self.layer4_maxpool(x)
+        x4 = self.layer4_maxpool(x)
         
         # layer5
-        x = self.layer5_conv1(x)
+        x = self.layer5_conv1(x4)
         x = self.layer5_relu1(x)
         x = self.layer5_conv2(x)
         x = self.layer5_relu2(x)
         x = self.layer5_conv3(x)
-        x = self.layer5_relu3(x)
+        x5 = self.layer5_relu3(x)
         
         # extra layer
-        x = self.extra_conv1(x)
+        x = self.extra_conv1(x5)
         x = self.extra_relu1(x)
         x = self.extra_conv2(x)
         x = self.extra_relu2(x)
         x = self.extra_conv3(x)
         x = self.extra_relu3(x)
-        x = self.extra_conv4(x)
+        x6 = self.extra_conv4(x)
         # ==============================
         
-        logit = self.fc(x)
+        logit = self.fc(x6)
         
         if label is None:
-            # for training
-            return logit
+            if self.out_features:
+                return logit, [x1, x2, x3, x4, x5, x6]
+            else:
+                # for training
+                return logit
         
         else:
             # for validation
-            cam = self.cam_normalize(x.detach(), size, label)
-
-            return logit, cam
+            cam = self.cam_normalize(x6.detach(), size, label)
+            
+            if self.out_features:
+                return logit, cam, [x1, x2, x3, x4, x5, x6]
+            else:
+                return logit, cam
 
     
     def fc(self, x):
@@ -304,8 +311,8 @@ cfg = {
 }
 
 
-def vgg16(pretrained=True, delta=0):
-    model = VGG(make_layers(cfg['D1']), delta=delta)
+def vgg16(pretrained=True, delta=0, out_features=False):
+    model = VGG(make_layers(cfg['D1']), delta=delta, out_features=out_features)
     
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['vgg16']), strict=False)

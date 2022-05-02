@@ -6,3 +6,6 @@ torch
 torchvision
 tqdm
 opencv-python
+matplotlib
+tensorboard
+scikit-learn

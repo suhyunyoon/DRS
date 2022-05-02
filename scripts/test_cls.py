@@ -46,23 +46,23 @@ model.load_state_dict(ckpt['model'], strict=True)
 train_loader = train_data_loader(args, args.train_list)
 test_loader = test_data_loader(args, args.test_list)
 
-loaders = [train_loader, test_loader]
+loaders = [('TRAIN', train_loader), ('TEST', test_loader)]
 
 if args.train_ulb_list:
     train_ulb_loader = train_data_loader(args, args.train_ulb_list)
-    loaders.append(train_ulb_loader)
+    loaders.append(('unlabeled TRAIN', train_ulb_loader))
 
 
-for loader in loaders:
-    print('# of dataset:', len(loader) * args.batch_size)
+for name, loader in loaders:
+    print(f'# of {name} dataset: {len(loader) * args.batch_size}')
 
     """ metric """
     mIOU = IOUMetric(num_classes=21)
     running_confusion_matrix = RunningConfusionMatrix(labels=range(21))
 
 
-    for idx, dat in enumerate(test_loader):
-        print("[%03d/%03d]" % (idx, len(test_loader)), end="\r")
+    for idx, dat in enumerate(loader):
+        print("[%03d/%03d]" % (idx, len(loader)), end="\r")
 
         img, label, sal_map, gt_map, img_name = dat
         

@@ -43,13 +43,13 @@ model.load_state_dict(ckpt['model'], strict=True)
 
 
 """ dataloader """
-train_loader = train_data_loader(args, args.train_list)
+train_loader = test_data_loader(args, args.train_list)
 test_loader = test_data_loader(args, args.test_list)
 
 loaders = [('TRAIN', train_loader), ('TEST', test_loader)]
 
 if args.train_ulb_list:
-    train_ulb_loader = train_data_loader(args, args.train_ulb_list)
+    train_ulb_loader = test_data_loader(args, args.train_ulb_list)
     loaders.append(('unlabeled TRAIN', train_ulb_loader))
 
 

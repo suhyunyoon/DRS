@@ -50,7 +50,7 @@ def valid_data_loader(args, data_list=''):
 
     img_test = VOCDataset(data_list, crop_size, root_dir=args.img_dir, num_classes=args.num_classes, transform=tsfm_test, mode='valid')
 
-    val_loader = DataLoader(img_test, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    val_loader = DataLoader(img_test, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     return val_loader
 

@@ -204,7 +204,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=args.logdir)
     
     train_loader = train_data_loader(args, args.train_list)
-    val_loader = valid_data_loader(args)
+    val_loader = valid_data_loader(args, args.test_list)
     print('# of train dataset:', len(train_loader) * args.batch_size)
     print('# of valid dataset:', len(val_loader) * args.batch_size)
 
